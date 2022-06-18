@@ -21,7 +21,7 @@
         {% endwith %}
         <div class="d-flex" style="justify-content: space-between">
             <a href="/tambahData" >
-                <button type="submit" class="btn " style="background-color: #FFC700;">Tambah Data</button>
+                <button type="submit" class="btn " style="background-color: #FFC700;"><b>Tambah Data</b></button>
             </a>
            
         </div>
@@ -49,9 +49,7 @@
                         <div class="d-flex" style="justify-content: space-between">
                             <a href="/editBurung/{{data.nama}}" style="margin-right:32px">
                                 <i style="font-size:16px" class="fa fa-edit text-warning" aria-hidden="true"></i></a>
-                            <a href="/hapusBurung/{{data.nama}}">
-                                <i style="font-size:16px" class="fa fa-trash text-danger" aria-hidden="true"></i></a>
-                        </div>
+                         </div>
                     </td>
                 </tr>
                 {% endfor %}

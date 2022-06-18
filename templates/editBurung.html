@@ -13,13 +13,13 @@
 
 <div class="container">
     <div class="daftarBurung">
-        <h2>Isi Data Karyawan</h2>
+        <h2>Update Data Burung</h2>
         <form method="post" action="/updateBurung/{{editBurung.nama}}">
             <hr>
             <div>
                 <label for="nm_burung">Nama Burung</label>
                 <input value="{{editBurung.nama}}" maxlength="35" class="form-control" type="text"
-                    name="nm_burung" required><br>
+                    name="nm_burung" disabled ><br>
                 <label for="nm_ilmiah">Nama Ilmiah</label>
                 <input value="{{editBurung.nama_ilmiah}}" class="form-control" type="text" name="nm_ilmiah" required><br>
                 <label for="spesies">Spesies</label>

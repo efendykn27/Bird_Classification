@@ -4,7 +4,8 @@ from keras.models import Sequential
 from keras.layers import Dense,Conv2D,MaxPool2D,Dropout,BatchNormalization,Flatten,Activation
 from keras.preprocessing import image 
 from keras.preprocessing.image import ImageDataGenerator
-import matplotlib.pyplot as plt
+import datetime 
+from datetime import date
 from keras.utils.vis_utils import plot_model
 import pickle
 from flask import Flask, jsonify,request,flash,redirect,render_template, session,url_for
@@ -17,6 +18,11 @@ from flask_restful import Resource, Api
 import pymongo
 import re
 from flask_ngrok import run_with_ngrok
+import pyngrok
+from PIL import Image
+import datetime
+import random
+import string
 
 app = Flask(__name__)
 run_with_ngrok(app)
@@ -48,10 +54,9 @@ num_classes_bird = pickle.load(pickle_inn)
 
 def allowed_file(filename):     
   return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-class index(Resource):
-  def post(self):
-
+  
+@app.route('/api/image', methods=['POST'])
+def predict():
     if 'image' not in request.files:
       flash('No file part')
       return jsonify({
@@ -71,45 +76,49 @@ class index(Resource):
       #       print('Deleting file:', file_del)
       #       os.remove(file_del)
       #       print("file "+file_del+" telah terhapus")
-      filename = secure_filename(file.filename)
+      
+      letters = string.ascii_lowercase
+      result_str = ''.join(random.choice(letters) for i in range(5))
+      
+      filename = secure_filename(file.filename+result_str+".jpg")
+      print(filename)
       file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
       path=("foto_burung/"+filename)
+
+      #foo = Image.open(path)    
+      #foo = foo.resize((300,300),Image.ANTIALIAS)
+      #foo.save("foto_burung\\"+filename+result_str,quality=95)      
+      
+      today = date.today()
+      db.riwayat.insert_one({'nama_file': filename, 'path': path, 'prediksi':'No predict', 'akurasi':0, 'tanggal':today.strftime("%d/%m/%Y")})
 
       #def predict(dir):
       img=image.load_img(path,target_size=(224,224))
       img1=image.img_to_array(img)
       img1=img1/255
       img1=np.expand_dims(img1,[0])
-      plt.imshow(img)
       predict=model.predict(img1)
       classes=np.argmax(predict,axis=1)
       for key,values in num_classes_bird.items():
           if classes==values:
             accuracy = float(round(np.max(model.predict(img1))*100,2))
             info = db['data_burung'].find_one({'nama': str(key)})
-
-            if accuracy >35:
-              print("The predicted image of the bird is: "+str(key)+" with a probability of "+str(accuracy)+"%")
-
-              db.riwayat.insert_one({'nama_file': filename, 'path': path, 'prediksi':str(key), 'akurasi':accuracy})
-            
-              return jsonify({
-                "Nama_Burung":str(key),
-                "Accuracy":str(accuracy)+"%",
-                "Nama_Ilmiah": info['nama_ilmiah'],
-                "Spesies" : info['spesies'],
-                "Makanan" : info['makanan'],
-                "Status" :  info['status']         
-                
+            db.riwayat.update_one({'nama_file': filename}, 
+              {"$set": {
+                'prediksi': str(key), 
+                'akurasi':accuracy
+              }
               })
-            else :
-              print("The predicted image of the bird is: "+str(key)+" with a probability of "+str(accuracy)+"%")
-              return jsonify({
-                "Message":str("Jenis Burung belum tersedia "),
-                "Accuracy":str(accuracy)+"%"               
+            print("The predicted image of the bird is: "+str(key)+" with a probability of "+str(accuracy)+"%")            
+            return jsonify({
+              "Nama_Burung":str(key),
+              "Accuracy":str(accuracy)+"%",
+              "Nama_Ilmiah": info['nama_ilmiah'],
+              "Spesies" : info['spesies'],
+              "Makanan" : info['makanan'],
+              "Status" :  info['status']         
                 
-              })
-      
+            })      
     else:
       return jsonify({
         "Message":"bukan file image"
@@ -146,11 +155,6 @@ def dataBurung():
     print(data)
     return render_template('dataBurung.html',dataBurung  = data)
 
-@app.route('/riwayat')
-def riwayat():
-    dataRiwayat = db['riwayat'].find({})
-    print(dataRiwayat)
-    return render_template('riwayat.html',riwayat  = dataRiwayat)
 
 @app.route('/tambahData')
 def tambahData():
@@ -187,7 +191,7 @@ def editBurung(nama):
 @app.route('/updateBurung/<nama>', methods=['POST'])
 def updatBurung(nama):
     if request.method == 'POST':
-        nm_burung = request.form['nm_burung']
+        
         nm_ilm = request.form['nm_ilmiah']
         spesies = request.form['spesies']
         makanan = request.form['makanan']
@@ -197,7 +201,7 @@ def updatBurung(nama):
         else:
           db.data_burung.update_one({'nama': nama}, 
           {"$set": {
-            'nama': nm_burung, 
+             
             'nama_ilmiah': nm_ilm, 
             'spesies':spesies, 
             'makanan':makanan, 
@@ -211,13 +215,20 @@ def updatBurung(nama):
     return render_template("dataBurung.html")
 
 #menghaus daftar Burung
-@app.route('/hapusBurung/<nama>', methods = ['POST','GET'])
-def hapusBurung(nama):
+#@app.route('/hapusBurung/<nama>', methods = ['POST','GET'])
+#def hapusBurung(nama):
   
-    db.data_burung.delete_one({'nama': nama})
-    flash('Burung Berhasil Dihapus!')
-    return redirect(url_for('dataBurung'))
+    #db.data_burung.delete_one({'nama': nama})
+    #flash('Burung Berhasil Dihapus!')
+    #return redirect(url_for('dataBurung'))
 
+
+@app.route('/riwayat')
+def riwayat():
+    dataRiwayat = db['riwayat'].find({})
+    print(dataRiwayat)
+    return render_template('riwayat.html',riwayat  = dataRiwayat)
+    
 @app.route('/hapusRiwayat/<nama_file>', methods = ['POST','GET'])
 def hapusRiwayat(nama_file):
   
@@ -229,9 +240,6 @@ def hapusRiwayat(nama_file):
 def logout():
     session.clear()
     return redirect(url_for('login'))
-
-
-api.add_resource(index, "/api/image", methods=["POST"])
 
 if __name__ == '__main__':
   
